@@ -20,9 +20,11 @@ function OnInputValue(e) {
 }
 
 function inputValueSetings(response) {
+  response.length === 1 && createCartInfo(response);
   response.length < 2 && createCartInfo(response);
   response.length < 11 && response.length > 1 && createList(response);
   response.length > 10 &&
+
     Notify.info('Too many matches found. Please enter a more specific name.');
 }
 
@@ -41,7 +43,7 @@ function createList(response) {
 function createCartInfo(response) {
   clearMarkup();
   let markup = response.map(
-    ({ name, capital, population, flags: { svg }, languages }) => {
+    ({ name, capital, population, flags: { svg }, languages}) => {
       return `
         <ul class="country-info__list">
           <li class="country-info__item">
@@ -55,7 +57,7 @@ function createCartInfo(response) {
             <h2 class="country-info__title">Population:</h2><p class="country-info__text">${population}</p>
           </li>
           <li class="country-info__item">
-            <h2 class="country-info__title">Languages:</h2><p class="country-info__text">${languages[0].nativeName}
+            <h2 class="country-info__title">Languages:</h2><p class="country-info__text">${object.values(languages).join(", ")}</p>
           </li>
         </ul>`;
     }
