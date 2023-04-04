@@ -3,52 +3,71 @@ import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import debounce from 'lodash.debounce';
 import { fetchCountries } from './fetchCountries';
 import { refs } from './refs';
+
 const DEBOUNCE_DELAY = 300;
 
-refs.input.addEventListener('input', debounce(OnInputValue, DEBOUNCE_DELAY));
 
-function OnInputValue(e) {
-  e.preventDefault();
-  const inputValue = e.target.value.trim();
-  if (inputValue) {
-    fetchCountries(inputValue)
-      .then(response => inputValueSetings(response))
-      .catch(() => Notify.failure('Oops, there is no country with that name'));
-  } else {
-    clearMarkup();
+const cleanMarkup = ref => (ref.innerHTML = '');
+
+const inputHandler = e => {
+  const textInput = e.target.value.trim();
+
+  if (!textInput) {
+    cleanMarkup(refs.countryList);
+    cleanMarkup(refs.countryInfo);
+    return;
   }
-}
 
-function inputValueSetings(response) {
-  response.length === 1 && createCartInfo(response);
-  response.length < 2 && createCartInfo(response);
-  response.length < 11 && response.length > 1 && createList(response);
-  response.length > 10 &&
+  fetchCountries(textInput)
+    .then(response => {
+      console.log(response);
+      if (response.length > 10) {
+        Notify.info(
+          'Too many matches found. Please enter a more specific name'
+        );
+        return;
+      }
+      renderMarkup(response);
+    })
+    .catch(err => {
+      cleanMarkup(refs.countryList);
+      cleanMarkup(refs.countryInfo);
+      Notify.failure('Oops, there is no country with that name');
+    });
+};
 
-    Notify.info('Too many matches found. Please enter a more specific name.');
-}
+const renderMarkup = response => {
+  if (response.length ===  1) {
+    cleanMarkup(refs.countryList);
+    const markupInfo = createInfoMarkup(response);
+    refs.countryInfo.innerHTML = markupInfo;
+  } else {
+    cleanMarkup(refs.countryInfo);
+    const markupList = createListMarkup(response);
+    refs.countryList.innerHTML = markupList;
+  }
+};
 
-function createList(response) {
-  clearMarkup();
-  let markup = response.map(({ name, flags: { svg } }) => {
-    return `
-      <li class="country-list__item">
-        <img class="country-list__flag" src="${svg}" alt="Flag of mp${name}"/>
-        <p class="country-list__name">${name}</p>
-      </li>`;
-  });
-  refs.countryList.insertAdjacentHTML('beforeend', markup.join(''));
-}
+const createListMarkup = response => {
+  return response
+    .map(
+      ({ name, flags }) =>
+        `
+        <li class="country-list__item">
+        <img class="country-list__flag" src="${flags.png}" alt="${name.official}" width="60" height="40"/>
+        <p class="country-list__name">${name.official}</p>
+      </li>`
+    )
+    .join('');
+};
 
-function createCartInfo(response) {
-  clearMarkup();
-  let markup = response.map(
-    ({ name, capital, population, flags: { svg }, languages}) => {
-      return `
-        <ul class="country-info__list">
+const createInfoMarkup = response => {
+  return response.map(
+    ({ name, capital, population, flags, languages }) =>
+      `<ul class="country-info__list">
           <li class="country-info__item">
-            <img class="country-info__flag" src='${svg}' alt='flag' />
-            <span class="country-info__name">${name}</span>
+          <img src="${flags.png}" alt="${name.official}" width="200" height="100">
+            <span class="country-info__name">${name.official}</span>
           </li>
           <li class="country-info__item">
             <h2 class="country-info__title">Capital:</h2><p class="country-info__text">${capital}</p>
@@ -57,15 +76,10 @@ function createCartInfo(response) {
             <h2 class="country-info__title">Population:</h2><p class="country-info__text">${population}</p>
           </li>
           <li class="country-info__item">
-            <h2 class="country-info__title">Languages:</h2><p class="country-info__text">${object.values(languages).join(", ")}</p>
+            <h2 class="country-info__title">Languages:</h2><p class="country-info__text">${Object.values(languages)}
           </li>
-        </ul>`;
-    }
+        </ul>`
   );
-  refs.countryInfo.innerHTML = markup
-}
+};
 
-function clearMarkup() {
-  refs.countryList.innerHTML = '';
-  refs.countryInfo.innerHTML = '';
-}
+refs.input.addEventListener('input', debounce(inputHandler, DEBOUNCE_DELAY));
